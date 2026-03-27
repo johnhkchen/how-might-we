@@ -19,5 +19,9 @@ backend/baml_client/
 # Go
 backend/bootstrap
 
+# Test artifacts
+frontend/playwright-report/
+frontend/test-results/
+
 # OS
 .DS_Store

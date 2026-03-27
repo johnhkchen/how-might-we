@@ -1,7 +1,7 @@
 // Mock SSE streaming data for ExpandHMW
 // Simulates BAML's structured streaming — variants appear one at a time
 
-import type { HMWVariant } from '../../src/lib/stores/session';
+import type { HMWVariant } from '../../src/lib/stores/session.svelte';
 
 interface HMWExpansion {
 	variants: HMWVariant[];
@@ -113,12 +113,10 @@ export const mockExpansionPartials: Partial<HMWExpansion>[] = [
 	}
 ];
 
-export const mockExpansionFinal: HMWExpansion =
-	mockExpansionPartials[mockExpansionPartials.length - 1] as HMWExpansion;
+export const mockExpansionFinal: HMWExpansion = mockExpansionPartials[
+	mockExpansionPartials.length - 1
+] as HMWExpansion;
 
 export function expansionSSEStream(): string[] {
-	return [
-		...mockExpansionPartials.map((e) => `data: ${JSON.stringify(e)}`),
-		'data: [DONE]'
-	];
+	return [...mockExpansionPartials.map((e) => `data: ${JSON.stringify(e)}`), 'data: [DONE]'];
 }

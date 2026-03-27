@@ -16,10 +16,10 @@ Full specification: `docs/specification.md`
 ## Commands
 
 ```bash
-# Backend (Go)
-cd backend && go run main.go                  # Local server on :8080
+# Backend (Go) — use doppler run to inject secrets
+cd backend && doppler run -- go run main.go   # Local server on :8080 with secrets
 cd backend && baml-cli generate               # Regenerate Go client from .baml files
-cd backend && go test ./...                   # Run Go tests
+cd backend && doppler run -- go test ./...    # Run Go tests
 
 # Frontend (SvelteKit)
 cd frontend && npm install                    # Install dependencies
@@ -31,12 +31,15 @@ cd frontend && npx playwright test            # E2E tests
 cd frontend && npx playwright test --ui       # E2E tests with UI
 
 # BAML
-cd backend && baml-cli test                   # Run BAML prompt tests
-cd backend && baml-cli test -i "RefinePersona:TestRefinePersona"  # Run specific test
+cd backend && doppler run -- baml-cli test    # Run BAML prompt tests
+cd backend && doppler run -- baml-cli test -i "RefinePersona:TestRefinePersona"
+
+# Secrets (Doppler)
+doppler secrets                               # List all secrets
+doppler secrets set ANTHROPIC_API_KEY         # Set a secret (interactive)
 
 # Deploy (requires AWS + CF credentials)
 npx sst deploy                                # Deploy all
-npx sst secrets set AnthropicApiKey sk-ant-...  # Set secrets
 ```
 
 ## Source Layout
@@ -66,7 +69,7 @@ npx sst secrets set AnthropicApiKey sk-ant-...  # Set secrets
 │   │   │   ├── +page.svelte         # Landing page
 │   │   │   └── workshop/+page.svelte # Main workshop UI
 │   │   └── lib/
-│   │       ├── stores/session.ts    # Session state store
+│   │       ├── stores/session.svelte.ts # Session state store (Svelte 5 runes)
 │   │       ├── api/stream.ts        # SSE client utility
 │   │       └── components/          # UI components (PersonaCard, VariantGrid, etc.)
 │   ├── tests/                       # Playwright E2E tests

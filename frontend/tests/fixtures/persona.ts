@@ -1,7 +1,7 @@
 // Mock SSE streaming data for RefinePersona
 // Simulates BAML's structured streaming — fields fill in progressively
 
-import type { Persona } from '../../src/lib/stores/session';
+import type { Persona } from '../../src/lib/stores/session.svelte';
 
 export const mockPersonaPartials: Partial<Persona>[] = [
 	{
@@ -54,11 +54,10 @@ export const mockPersonaPartials: Partial<Persona>[] = [
 	}
 ];
 
-export const mockPersonaFinal: Persona = mockPersonaPartials[mockPersonaPartials.length - 1] as Persona;
+export const mockPersonaFinal: Persona = mockPersonaPartials[
+	mockPersonaPartials.length - 1
+] as Persona;
 
 export function personaSSEStream(): string[] {
-	return [
-		...mockPersonaPartials.map((p) => `data: ${JSON.stringify(p)}`),
-		'data: [DONE]'
-	];
+	return [...mockPersonaPartials.map((p) => `data: ${JSON.stringify(p)}`), 'data: [DONE]'];
 }

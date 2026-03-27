@@ -1,7 +1,7 @@
 // Mock SSE streaming data for AnalyzeHMW
 // Simulates BAML's structured streaming — fields build progressively
 
-import type { HMWAnalysis } from '../../src/lib/stores/session';
+import type { HMWAnalysis } from '../../src/lib/stores/session.svelte';
 
 export const mockAnalysisPartials: Partial<HMWAnalysis>[] = [
 	{
@@ -35,7 +35,7 @@ export const mockAnalysisPartials: Partial<HMWAnalysis>[] = [
 			'The problem is the workshop format, not what happens before/after'
 		],
 		scopeLevel: 'too_broad',
-		solutionBias: null,
+		solutionBias: undefined,
 		underlyingTension:
 			'The facilitator needs to appear competent while learning on the job — the real problem may be confidence in the process, not the process itself.',
 		initialReframing:
@@ -43,12 +43,10 @@ export const mockAnalysisPartials: Partial<HMWAnalysis>[] = [
 	}
 ];
 
-export const mockAnalysisFinal: HMWAnalysis =
-	mockAnalysisPartials[mockAnalysisPartials.length - 1] as HMWAnalysis;
+export const mockAnalysisFinal: HMWAnalysis = mockAnalysisPartials[
+	mockAnalysisPartials.length - 1
+] as HMWAnalysis;
 
 export function analysisSSEStream(): string[] {
-	return [
-		...mockAnalysisPartials.map((a) => `data: ${JSON.stringify(a)}`),
-		'data: [DONE]'
-	];
+	return [...mockAnalysisPartials.map((a) => `data: ${JSON.stringify(a)}`), 'data: [DONE]'];
 }

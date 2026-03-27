@@ -1,7 +1,7 @@
 // Mock SSE streaming data for RefineHMW
 // Simulates BAML's structured streaming for the refinement loop
 
-import type { HMWVariant } from '../../src/lib/stores/session';
+import type { HMWVariant } from '../../src/lib/stores/session.svelte';
 
 interface HMWRefinement {
 	newVariants: HMWVariant[];
@@ -85,12 +85,10 @@ export const mockRefinementPartials: Partial<HMWRefinement>[] = [
 	}
 ];
 
-export const mockRefinementFinal: HMWRefinement =
-	mockRefinementPartials[mockRefinementPartials.length - 1] as HMWRefinement;
+export const mockRefinementFinal: HMWRefinement = mockRefinementPartials[
+	mockRefinementPartials.length - 1
+] as HMWRefinement;
 
 export function refinementSSEStream(): string[] {
-	return [
-		...mockRefinementPartials.map((r) => `data: ${JSON.stringify(r)}`),
-		'data: [DONE]'
-	];
+	return [...mockRefinementPartials.map((r) => `data: ${JSON.stringify(r)}`), 'data: [DONE]'];
 }

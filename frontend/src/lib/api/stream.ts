@@ -14,7 +14,15 @@ export async function streamFromAPI<T>(
 	});
 
 	if (!response.ok) {
-		throw new Error(`API error: ${response.status} ${response.statusText}`);
+		let message = `API error: ${response.status} ${response.statusText}`;
+		try {
+			const text = await response.text();
+			const json = JSON.parse(text);
+			if (json.error) message = `API error: ${response.status} — ${json.error}`;
+		} catch {
+			// response body unreadable or not JSON — use default message
+		}
+		throw new Error(message);
 	}
 
 	const reader = response.body?.getReader();
@@ -32,9 +40,30 @@ export async function streamFromAPI<T>(
 		buffer = lines.pop() || '';
 
 		for (const line of lines) {
-			if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-				onPartial(JSON.parse(line.slice(6)));
+			processSSELine(line, endpoint, onPartial);
+		}
+	}
+
+	// Process any remaining data in the buffer after stream ends
+	if (buffer.trim()) {
+		processSSELine(buffer, endpoint, onPartial);
+	}
+}
+
+function processSSELine<T>(
+	line: string,
+	endpoint: string,
+	onPartial: (data: Partial<T>) => void
+): void {
+	if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+		try {
+			const parsed = JSON.parse(line.slice(6)) as Partial<T>;
+			if (import.meta.env.DEV) {
+				console.debug('[SSE]', endpoint, parsed);
 			}
+			onPartial(parsed);
+		} catch {
+			console.warn('[SSE] Skipping malformed data:', line);
 		}
 	}
 }
