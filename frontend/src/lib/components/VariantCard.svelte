@@ -66,12 +66,14 @@
 	);
 
 	const opacityClass = $derived(candidate.status === 'skipped' ? 'opacity-50' : '');
+	const iterationBorderClass = $derived(candidate.iteration > 0 ? 'border-l-4 border-l-purple-300' : '');
 </script>
 
 <div
-	class="bg-white rounded-lg border p-4 transition-all {borderClass} {opacityClass}"
+	class="bg-white rounded-lg border p-4 transition-all {borderClass} {opacityClass} {iterationBorderClass}"
 	data-testid="variant-card"
 	data-status={candidate.status}
+	data-iteration={candidate.iteration}
 >
 	<!-- Move type badge -->
 	<span
@@ -81,6 +83,14 @@
 	>
 		{moveLabel(candidate.variant.move)}
 	</span>
+	{#if candidate.iteration > 0}
+		<span
+			class="inline-block text-xs font-medium px-2.5 py-0.5 rounded-full mb-3 ml-1 bg-purple-100 text-purple-700"
+			data-testid="iteration-badge"
+		>
+			Iteration {candidate.iteration}
+		</span>
+	{/if}
 
 	<!-- HMW Statement -->
 	{#if isEditing}

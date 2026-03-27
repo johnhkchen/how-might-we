@@ -56,6 +56,7 @@ export interface HMWCandidate {
 	variant: HMWVariant;
 	status: CandidateStatus;
 	userEdits?: string;
+	iteration: number;
 }
 
 export interface SessionState {
@@ -100,11 +101,12 @@ class SessionStore {
 		this.analysis = analysis;
 	}
 
-	addCandidates(variants: HMWVariant[]): void {
+	addCandidates(variants: HMWVariant[], iteration: number = 0): void {
 		const newCandidates: HMWCandidate[] = variants.map((variant) => ({
 			id: crypto.randomUUID(),
 			variant,
-			status: 'generated' as CandidateStatus
+			status: 'generated' as CandidateStatus,
+			iteration
 		}));
 		this.candidates = [...this.candidates, ...newCandidates];
 	}

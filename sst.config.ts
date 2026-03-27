@@ -19,18 +19,28 @@ export default $config({
     const anthropicKey = new sst.Secret("AnthropicApiKey");
 
     // Go Lambda with streaming
-    // NOTE: BAML requires CGo, which doesn't cross-compile from macOS.
-    // T-004 will solve this with a Docker-based build or ECR container image.
+    // Pre-built via `backend/build.sh` (zig cc cross-compiles CGo for BAML)
     const api = new sst.aws.Function("HmwApi", {
-      handler: "backend",
-      runtime: "go",
+      bundle: "backend",
+      handler: "bootstrap",
+      runtime: "provided.al2023",
       architecture: "arm64",
       url: {
         streaming: true,
       },
+      environment: {
+        HOME: "/tmp",
+        ANTHROPIC_API_KEY: anthropicKey.value,
+      },
       link: [anthropicKey],
       timeout: "5 minutes",
       memory: "512 MB",
+      transform: {
+        url: (args) => {
+          // SST sets BUFFERED for custom runtimes; override for SSE streaming
+          args.invokeMode = "RESPONSE_STREAM";
+        },
+      },
     });
 
     // TODO (T-004): Frontend deployment to Cloudflare Pages
