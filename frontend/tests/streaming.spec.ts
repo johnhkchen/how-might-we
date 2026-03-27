@@ -30,13 +30,15 @@ test.describe('Fixture data validation', () => {
 	});
 
 	test('expansion fixture grows variants array incrementally', () => {
-		expect(mockExpansionPartials.length).toBe(4);
+		expect(mockExpansionPartials.length).toBe(5);
+		// First partial is an incomplete variant (no moveType) — tests the dedup gate
 		expect(mockExpansionPartials[0].variants?.length).toBe(1);
 		expect(mockExpansionPartials[mockExpansionPartials.length - 1].variants?.length).toBe(6);
 	});
 
 	test('refinement fixture has progressively building partials', () => {
-		expect(mockRefinementPartials.length).toBe(3);
+		expect(mockRefinementPartials.length).toBe(4);
+		// First partial is an incomplete variant (no moveType) — tests the dedup gate
 		expect(mockRefinementPartials[0].newVariants?.length).toBe(1);
 		// Last partial has all fields
 		const last = mockRefinementPartials[mockRefinementPartials.length - 1];
@@ -287,6 +289,267 @@ test.describe('SSE streaming — error handling', () => {
 	});
 });
 
+test.describe('SSE streaming — rate limit handling', () => {
+	test('429 with Retry-After header provides structured rate limit info', async ({ page }) => {
+		await page.route('/api/test-ratelimit', (route) => {
+			route.fulfill({
+				status: 429,
+				headers: {
+					'Content-Type': 'application/json',
+					'Retry-After': '30',
+					'X-RateLimit-Remaining': '0',
+					'X-RateLimit-Limit': '20'
+				},
+				body: JSON.stringify({ error: 'Rate limit exceeded' })
+			});
+		});
+
+		await page.goto('/');
+
+		const result = await page.evaluate(async () => {
+			const response = await fetch('/api/test-ratelimit', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({})
+			});
+
+			if (response.status === 429) {
+				return {
+					status: response.status,
+					retryAfter: response.headers.get('Retry-After'),
+					remaining: response.headers.get('X-RateLimit-Remaining'),
+					limit: response.headers.get('X-RateLimit-Limit'),
+					body: await response.json()
+				};
+			}
+			return null;
+		});
+
+		expect(result).not.toBeNull();
+		expect(result!.status).toBe(429);
+		expect(result!.retryAfter).toBe('30');
+		expect(result!.remaining).toBe('0');
+		expect(result!.limit).toBe('20');
+		expect(result!.body.error).toBe('Rate limit exceeded');
+	});
+
+	test('429 with Retry-After: 0 indicates session limit (no recovery)', async ({ page }) => {
+		await page.route('/api/test-session-limit', (route) => {
+			route.fulfill({
+				status: 429,
+				headers: {
+					'Content-Type': 'application/json',
+					'Retry-After': '0',
+					'X-RateLimit-Remaining': '0',
+					'X-RateLimit-Limit': '50'
+				},
+				body: JSON.stringify({ error: 'Session rate limit exceeded' })
+			});
+		});
+
+		await page.goto('/');
+
+		const result = await page.evaluate(async () => {
+			const response = await fetch('/api/test-session-limit', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({})
+			});
+
+			if (response.status === 429) {
+				const retryAfter = parseInt(response.headers.get('Retry-After') || '0', 10);
+				return {
+					status: response.status,
+					retryAfter,
+					isSessionLimit: retryAfter === 0,
+					body: await response.json()
+				};
+			}
+			return null;
+		});
+
+		expect(result).not.toBeNull();
+		expect(result!.status).toBe(429);
+		expect(result!.retryAfter).toBe(0);
+		expect(result!.isSessionLimit).toBe(true);
+		expect(result!.body.error).toContain('Session');
+	});
+
+	test('X-RateLimit-Remaining is accessible on successful responses', async ({ page }) => {
+		await page.route('/api/test-remaining', (route) => {
+			route.fulfill({
+				status: 200,
+				headers: {
+					'Content-Type': 'text/event-stream',
+					'Cache-Control': 'no-cache',
+					'X-RateLimit-Remaining': '15',
+					'X-RateLimit-Limit': '20'
+				},
+				body: 'data: {"test":true}\n\ndata: [DONE]\n\n'
+			});
+		});
+
+		await page.goto('/');
+
+		const result = await page.evaluate(async () => {
+			const response = await fetch('/api/test-remaining', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({})
+			});
+
+			return {
+				status: response.status,
+				remaining: response.headers.get('X-RateLimit-Remaining'),
+				limit: response.headers.get('X-RateLimit-Limit')
+			};
+		});
+
+		expect(result.status).toBe(200);
+		expect(result.remaining).toBe('15');
+		expect(result.limit).toBe('20');
+	});
+
+	test('429 without JSON body still provides rate limit headers', async ({ page }) => {
+		await page.route('/api/test-ratelimit-plain', (route) => {
+			route.fulfill({
+				status: 429,
+				headers: {
+					'Content-Type': 'text/plain',
+					'Retry-After': '10',
+					'X-RateLimit-Remaining': '0',
+					'X-RateLimit-Limit': '20'
+				},
+				body: 'Too Many Requests'
+			});
+		});
+
+		await page.goto('/');
+
+		const result = await page.evaluate(async () => {
+			const response = await fetch('/api/test-ratelimit-plain', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({})
+			});
+
+			if (response.status === 429) {
+				return {
+					status: response.status,
+					retryAfter: response.headers.get('Retry-After'),
+					remaining: response.headers.get('X-RateLimit-Remaining')
+				};
+			}
+			return null;
+		});
+
+		expect(result).not.toBeNull();
+		expect(result!.retryAfter).toBe('10');
+		expect(result!.remaining).toBe('0');
+	});
+});
+
+test.describe('Rate limit UI — workshop page', () => {
+	test('429 on persona refinement shows rate limit banner and disables button', async ({ page }) => {
+		await page.goto('/workshop');
+		await page.fill('#persona-input', 'A test persona description');
+
+		// Override mock to return 429 for /api/persona
+		await page.evaluate(() => {
+			window.__mockApiOverride = {
+				'/api/persona': {
+					status: 429,
+					headers: {
+						'Content-Type': 'application/json',
+						'Retry-After': '3',
+						'X-RateLimit-Remaining': '0',
+						'X-RateLimit-Limit': '20'
+					},
+					body: JSON.stringify({ error: 'Rate limit exceeded' })
+				}
+			};
+		});
+
+		await page.click('[data-testid="refine-button"]');
+
+		// Rate limit banner should appear
+		const banner = page.locator('[data-testid="rate-limit-banner"]');
+		await expect(banner).toBeVisible();
+		await expect(banner).toContainText('Rate limit reached');
+		await expect(banner).toContainText('s');
+
+		// Refine button should be disabled and show countdown
+		const button = page.locator('[data-testid="refine-button"]');
+		await expect(button).toBeDisabled();
+		await expect(button).toContainText('Wait');
+	});
+
+	test('session rate limit shows permanent message', async ({ page }) => {
+		await page.goto('/workshop');
+		await page.fill('#persona-input', 'A test persona description');
+
+		await page.evaluate(() => {
+			window.__mockApiOverride = {
+				'/api/persona': {
+					status: 429,
+					headers: {
+						'Content-Type': 'application/json',
+						'Retry-After': '0',
+						'X-RateLimit-Remaining': '0',
+						'X-RateLimit-Limit': '50'
+					},
+					body: JSON.stringify({ error: 'Session rate limit exceeded' })
+				}
+			};
+		});
+
+		await page.click('[data-testid="refine-button"]');
+
+		const banner = page.locator('[data-testid="rate-limit-banner"]');
+		await expect(banner).toBeVisible();
+		await expect(banner).toContainText('Session request limit reached');
+
+		// Button should be disabled permanently (no countdown)
+		const button = page.locator('[data-testid="refine-button"]');
+		await expect(button).toBeDisabled();
+	});
+
+	test('countdown decrements and banner clears after reaching 0', async ({ page }) => {
+		await page.goto('/workshop');
+		await page.fill('#persona-input', 'A test persona description');
+
+		await page.evaluate(() => {
+			window.__mockApiOverride = {
+				'/api/persona': {
+					status: 429,
+					headers: {
+						'Content-Type': 'application/json',
+						'Retry-After': '2',
+						'X-RateLimit-Remaining': '0',
+						'X-RateLimit-Limit': '20'
+					},
+					body: JSON.stringify({ error: 'Rate limit exceeded' })
+				}
+			};
+		});
+
+		await page.click('[data-testid="refine-button"]');
+
+		const banner = page.locator('[data-testid="rate-limit-banner"]');
+		await expect(banner).toBeVisible();
+
+		// Wait for countdown to complete (2s + buffer)
+		await page.waitForTimeout(3000);
+
+		// Banner should disappear
+		await expect(banner).not.toBeVisible();
+
+		// Button should be re-enabled
+		const button = page.locator('[data-testid="refine-button"]');
+		await expect(button).not.toBeDisabled();
+	});
+});
+
 test.describe('Mock API streaming integration', () => {
 	// These tests verify the mock fetch layer produces correct SSE streams.
 	// The Playwright build uses VITE_MOCK_API=true, so apiFetch resolves to mockFetch.
@@ -309,14 +572,14 @@ test.describe('Mock API streaming integration', () => {
 	});
 
 	test('expansion mock produces correct number of streaming events', () => {
-		expect(mockExpansionPartials).toHaveLength(4);
+		expect(mockExpansionPartials).toHaveLength(5);
 		for (const partial of mockExpansionPartials) {
 			expect(() => JSON.stringify(partial)).not.toThrow();
 		}
 	});
 
 	test('refinement mock produces correct number of streaming events', () => {
-		expect(mockRefinementPartials).toHaveLength(3);
+		expect(mockRefinementPartials).toHaveLength(4);
 		for (const partial of mockRefinementPartials) {
 			expect(() => JSON.stringify(partial)).not.toThrow();
 		}
@@ -348,5 +611,141 @@ test.describe('Mock API streaming integration', () => {
 		const totalTime = mockPersonaPartials.length * STREAM_DELAY_MS;
 		expect(totalTime).toBeGreaterThanOrEqual(500); // not instant
 		expect(totalTime).toBeLessThanOrEqual(3000); // not sluggish
+	});
+});
+
+test.describe('Turnstile error handling — stream layer', () => {
+	test('403 with "Verification failed" body is detected as Turnstile error', async ({ page }) => {
+		await page.route('/api/test-turnstile-403', (route) => {
+			route.fulfill({
+				status: 403,
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ error: 'Verification failed' })
+			});
+		});
+
+		await page.goto('/');
+
+		const result = await page.evaluate(async () => {
+			const response = await fetch('/api/test-turnstile-403', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({})
+			});
+
+			if (response.status === 403) {
+				let msg = 'Bot protection check failed — try refreshing';
+				try {
+					const text = await response.text();
+					const json = JSON.parse(text);
+					if (json.error) msg = json.error;
+				} catch {
+					// use default
+				}
+				return { isTurnstileError: true, message: msg };
+			}
+			return { isTurnstileError: false, message: '' };
+		});
+
+		expect(result.isTurnstileError).toBe(true);
+		expect(result.message).toBe('Verification failed');
+	});
+
+	test('403 with non-JSON body uses default Turnstile error message', async ({ page }) => {
+		await page.route('/api/test-turnstile-plain', (route) => {
+			route.fulfill({
+				status: 403,
+				headers: { 'Content-Type': 'text/plain' },
+				body: 'Forbidden'
+			});
+		});
+
+		await page.goto('/');
+
+		const result = await page.evaluate(async () => {
+			const response = await fetch('/api/test-turnstile-plain', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({})
+			});
+
+			if (response.status === 403) {
+				let msg = 'Bot protection check failed — try refreshing';
+				try {
+					const text = await response.text();
+					const json = JSON.parse(text);
+					if (json.error) msg = json.error;
+				} catch {
+					// use default
+				}
+				return { isTurnstileError: true, message: msg };
+			}
+			return { isTurnstileError: false, message: '' };
+		});
+
+		expect(result.isTurnstileError).toBe(true);
+		expect(result.message).toBe('Bot protection check failed — try refreshing');
+	});
+});
+
+test.describe('Turnstile UI — workshop page', () => {
+	test('403 on persona refinement shows turnstile warning banner', async ({ page }) => {
+		await page.goto('/workshop');
+		await page.fill('#persona-input', 'A test persona description');
+
+		// Override mock to return 403 for /api/persona
+		await page.evaluate(() => {
+			window.__mockApiOverride = {
+				'/api/persona': {
+					status: 403,
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ error: 'Verification failed' })
+				}
+			};
+		});
+
+		await page.click('[data-testid="refine-button"]');
+
+		// Turnstile warning banner should appear
+		const banner = page.locator('[data-testid="turnstile-warning"]');
+		await expect(banner).toBeVisible();
+		await expect(banner).toContainText('Bot protection check failed');
+
+		// Stage error should also show
+		const errorMsg = page.locator('[data-testid="error-message"]');
+		await expect(errorMsg).toBeVisible();
+		await expect(errorMsg).toContainText('Bot protection check failed');
+	});
+
+	test('turnstile warning banner shows retry button only when site key is configured', async ({ page }) => {
+		await page.goto('/workshop');
+		await page.fill('#persona-input', 'A test persona description');
+
+		await page.evaluate(() => {
+			window.__mockApiOverride = {
+				'/api/persona': {
+					status: 403,
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ error: 'Verification failed' })
+				}
+			};
+		});
+
+		await page.click('[data-testid="refine-button"]');
+
+		// Banner should be visible
+		const banner = page.locator('[data-testid="turnstile-warning"]');
+		await expect(banner).toBeVisible();
+
+		// Retry button hidden when no site key configured (test env has empty key)
+		const retryBtn = page.locator('[data-testid="turnstile-retry"]');
+		await expect(retryBtn).not.toBeVisible();
+	});
+
+	test('turnstile banner not visible when no 403 has occurred', async ({ page }) => {
+		await page.goto('/workshop');
+
+		const banner = page.locator('[data-testid="turnstile-warning"]');
+		await expect(banner).not.toBeVisible();
 	});
 });

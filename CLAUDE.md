@@ -6,8 +6,9 @@ hmw-workshop — AI-powered tool for sculpting well-calibrated "How Might We" qu
 
 ## Architecture
 
-Monorepo with three layers:
+Monorepo with four layers:
 - **backend/** — Go + BAML (LLM orchestration). Runs as plain HTTP server locally, Lambda in production.
+- **worker/** — Cloudflare Worker proxy. Sits in front of Lambda in production: CORS, rate limiting, Turnstile.
 - **frontend/** — SvelteKit + Tailwind CSS. Deploys to Cloudflare Pages.
 - **sst.config.ts** — SST infrastructure-as-code (Lambda + CF Pages).
 
@@ -38,8 +39,18 @@ cd backend && doppler run -- baml-cli test -i "RefinePersona:TestRefinePersona"
 doppler secrets                               # List all secrets
 doppler secrets set ANTHROPIC_API_KEY         # Set a secret (interactive)
 
+# Worker (Cloudflare)
+cd worker && npm install                      # Install worker dependencies
+cd worker && npx wrangler dev                 # Local worker dev server
+cd worker && npx wrangler deploy              # Deploy worker to Cloudflare
+cd worker && npx wrangler secret put LAMBDA_URL  # Set Lambda URL secret
+
 # Deploy (requires AWS + CF credentials)
-npx sst deploy                                # Deploy all
+npx sst deploy                                # Deploy all (Lambda)
+npm run deploy:worker                         # Deploy worker to Cloudflare
+bash scripts/deploy.sh                        # Full-stack deploy (Lambda + Worker + Pages)
+bash scripts/deploy.sh --stage dev            # Deploy to a non-production stage
+bash scripts/verify-deploy.sh <WORKER_URL>    # Verify deployed stack
 ```
 
 ## Source Layout
@@ -60,6 +71,12 @@ npx sst deploy                                # Deploy all
 │       ├── analyze.baml             # AnalyzeHMW function
 │       ├── expand.baml              # ExpandHMW function
 │       └── refine.baml              # RefineHMW function
+├── worker/
+│   ├── wrangler.toml                # Worker config (name, vars)
+│   ├── src/
+│   │   └── index.ts                 # Worker entry: CORS, rate limit, proxy
+│   ├── package.json
+│   └── tsconfig.json
 ├── frontend/
 │   ├── svelte.config.js             # CF Pages adapter
 │   ├── vite.config.ts               # Vite + API proxy config
@@ -74,6 +91,9 @@ npx sst deploy                                # Deploy all
 │   │       └── components/          # UI components (PersonaCard, VariantGrid, etc.)
 │   ├── tests/                       # Playwright E2E tests
 │   └── tests/fixtures/              # Mock API responses for development
+├── scripts/
+│   ├── deploy.sh                    # Full-stack deploy orchestration
+│   └── verify-deploy.sh            # Post-deploy verification tests
 └── docs/
     ├── specification.md             # Full project specification
     └── knowledge/rdspi-workflow.md  # Lisa workflow definition
@@ -85,7 +105,8 @@ npx sst deploy                                # Deploy all
 - After editing any `.baml` file, run `baml-cli generate` to regenerate the Go client
 - Backend streams SSE (`text/event-stream`); frontend consumes via `lib/api/stream.ts`
 - Session state lives entirely in the frontend Svelte store — backend is stateless
-- Frontend proxies `/api/*` to the backend in dev (see `vite.config.ts`)
+- Frontend proxies `/api/*` to the backend in dev (see `vite.config.ts`); in production, requests go through the CF Worker
+- Worker is deployed independently via `wrangler deploy` (not SST-managed); Lambda URL is set as a wrangler secret
 - Mock fixtures in `frontend/tests/fixtures/` provide realistic streaming responses without LLM costs
 - Use `npm run dev:mock` for frontend development without LLM API costs
 

@@ -45,7 +45,7 @@ export type MoveType =
 
 export interface HMWVariant {
 	statement: string;
-	move: MoveType;
+	moveType: MoveType;
 	rationale: string;
 }
 
@@ -140,6 +140,20 @@ class SessionStore {
 		this.candidates = [];
 		this.iterationCount = 0;
 		this.isStreaming = false;
+	}
+
+	restore(data: {
+		persona: Persona | null;
+		problemContext: ProblemContext | null;
+		analysis: HMWAnalysis | null;
+		candidates: HMWCandidate[];
+		iterationCount: number;
+	}): void {
+		this.persona = data.persona;
+		this.problemContext = data.problemContext;
+		this.analysis = data.analysis;
+		this.candidates = data.candidates;
+		this.iterationCount = data.iterationCount;
 	}
 }
 

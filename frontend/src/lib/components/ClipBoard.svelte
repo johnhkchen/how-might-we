@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { HMWCandidate, MoveType } from '../stores/session.svelte';
+	import type { HMWCandidate } from '../stores/session.svelte';
+	import { moveLabel, moveColors } from '$lib/utils/moves';
 
 	let {
 		clippedCandidates,
@@ -8,24 +9,6 @@
 		clippedCandidates: HMWCandidate[];
 		onRemove: (id: string) => void;
 	} = $props();
-
-	const moveColors: Record<MoveType, { bg: string; text: string }> = {
-		narrowed: { bg: 'bg-green-100', text: 'text-green-800' },
-		broadened: { bg: 'bg-purple-100', text: 'text-purple-800' },
-		shifted_user: { bg: 'bg-orange-100', text: 'text-orange-800' },
-		reframed_constraint: { bg: 'bg-teal-100', text: 'text-teal-800' },
-		elevated_abstraction: { bg: 'bg-indigo-100', text: 'text-indigo-800' },
-		inverted: { bg: 'bg-red-100', text: 'text-red-800' },
-		combined: { bg: 'bg-amber-100', text: 'text-amber-800' },
-		decomposed: { bg: 'bg-sky-100', text: 'text-sky-800' }
-	};
-
-	function moveLabel(move: MoveType): string {
-		return move
-			.split('_')
-			.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-			.join(' ');
-	}
 </script>
 
 <div class="bg-white rounded-lg border border-gray-200 p-6" data-testid="clipboard">
@@ -45,10 +28,10 @@
 				<li class="flex items-start gap-2 group" data-testid="clipboard-item">
 					<div class="flex-1 min-w-0">
 						<span
-							class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mb-1 {moveColors[candidate.variant.move].bg} {moveColors[candidate.variant.move].text}"
+							class="inline-block text-xs font-medium px-2 py-0.5 rounded-full mb-1 {moveColors[candidate.variant.moveType].bg} {moveColors[candidate.variant.moveType].text}"
 							data-testid="clipboard-move-badge"
 						>
-							{moveLabel(candidate.variant.move)}
+							{moveLabel(candidate.variant.moveType)}
 						</span>
 						<p class="text-sm text-gray-900" data-testid="clipboard-statement">
 							{candidate.userEdits ?? candidate.variant.statement}

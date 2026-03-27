@@ -1,0 +1,23 @@
+name = "hmw-api-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+[vars]
+# Default for local development (wrangler dev). In production, this is
+# overridden by a wrangler secret set during deploy (see scripts/deploy.sh).
+# To add additional allowed origins (e.g., custom domain), update the
+# FRONTEND_URL in Doppler and redeploy, or set via:
+#   echo "https://your-domain.com" | npx wrangler secret put ALLOWED_ORIGIN
+ALLOWED_ORIGIN = "*"
+RATE_LIMIT_IP_MAX = "20"
+RATE_LIMIT_SESSION_MAX = "50"
+
+# KV namespace for global rate limiting (shared across isolates/locations).
+# Create with: wrangler kv namespace create "RATE_LIMIT"
+#              wrangler kv namespace create "RATE_LIMIT" --preview
+# Then fill in the IDs below.
+# Free tier: 100k reads/day, 1k writes/day. Paid ($5/mo): 10M reads, 1M writes.
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "PLACEHOLDER_PRODUCTION_ID"
+preview_id = "PLACEHOLDER_PREVIEW_ID"

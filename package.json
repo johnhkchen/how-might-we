@@ -5,7 +5,11 @@
   "scripts": {
     "dev:backend": "cd backend && go run main.go",
     "dev:frontend": "cd frontend && npm run dev",
-    "deploy": "npx sst deploy"
+    "dev:worker": "cd worker && npx wrangler dev",
+    "deploy": "npx sst deploy",
+    "deploy:worker": "cd worker && npx wrangler deploy",
+    "deploy:all": "bash scripts/deploy.sh",
+    "verify:deploy": "bash scripts/verify-deploy.sh"
   },
   "devDependencies": {
     "sst": "^3.0.0",

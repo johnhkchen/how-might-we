@@ -41,9 +41,34 @@ function createSSEStream(partials: Partial<unknown>[]): ReadableStream<Uint8Arra
 	});
 }
 
+// Allow tests to override mock responses for specific paths
+interface MockOverride {
+	status: number;
+	headers: Record<string, string>;
+	body: string;
+}
+
+declare global {
+	interface Window {
+		__mockApiOverride?: Record<string, MockOverride>;
+	}
+}
+
 export function mockFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
 	const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 	const path = new URL(url, 'http://localhost').pathname;
+
+	// Test override takes priority
+	const override = typeof window !== 'undefined' && window.__mockApiOverride?.[path];
+	if (override) {
+		return Promise.resolve(
+			new Response(override.body, {
+				status: override.status,
+				headers: override.headers
+			})
+		);
+	}
+
 	const partials = mockData[path];
 
 	if (partials) {

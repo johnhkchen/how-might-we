@@ -5,6 +5,26 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>HMW Workshop</title>
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+		<script>
+			// Turnstile script load detection
+			window.__turnstileScriptLoaded = false;
+			window.__turnstileScriptFailed = false;
+			window.__onTurnstileLoad = function () {
+				window.__turnstileScriptLoaded = true;
+			};
+			// Timeout: if script hasn't loaded in 5s, mark as failed
+			setTimeout(function () {
+				if (!window.__turnstileScriptLoaded) {
+					window.__turnstileScriptFailed = true;
+				}
+			}, 5000);
+		</script>
+		<script
+			src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__onTurnstileLoad"
+			async
+			defer
+			onerror="window.__turnstileScriptFailed=true"
+		></script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

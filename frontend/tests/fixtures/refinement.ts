@@ -11,12 +11,23 @@ interface HMWRefinement {
 }
 
 export const mockRefinementPartials: Partial<HMWRefinement>[] = [
+	// Intermediate partial: variant at index 0 is still building (no moveType yet).
+	// Simulates real BAML streaming where fields arrive token-by-token.
+	// The frontend must NOT commit this as a candidate.
+	{
+		newVariants: [
+			{
+				statement:
+					'How might we give junior designers a "pre-flight checklist"'
+			} as unknown as HMWVariant
+		]
+	},
 	{
 		newVariants: [
 			{
 				statement:
 					'How might we give junior designers a "pre-flight checklist" for HMW questions that builds their intuition over time?',
-				move: 'narrowed',
+				moveType: 'narrowed',
 				rationale:
 					'Combines the preparation focus with skill-building — the checklist is a scaffold that eventually becomes internalized.'
 			}
@@ -27,21 +38,21 @@ export const mockRefinementPartials: Partial<HMWRefinement>[] = [
 			{
 				statement:
 					'How might we give junior designers a "pre-flight checklist" for HMW questions that builds their intuition over time?',
-				move: 'narrowed',
+				moveType: 'narrowed',
 				rationale:
 					'Combines the preparation focus with skill-building — the checklist is a scaffold that eventually becomes internalized.'
 			},
 			{
 				statement:
 					'How might we make it easy for the whole product team to practice HMW framing outside of formal workshops?',
-				move: 'broadened',
+				moveType: 'broadened',
 				rationale:
 					'Builds on the team capability theme — if everyone practices, the facilitator burden drops naturally.'
 			},
 			{
 				statement:
 					'How might we help junior designers see the connection between their HMW questions and the quality of ideas they generate?',
-				move: 'combined',
+				moveType: 'combined',
 				rationale:
 					'Merges the feedback loop idea with the junior designer focus — makes learning concrete.'
 			}
@@ -55,21 +66,21 @@ export const mockRefinementPartials: Partial<HMWRefinement>[] = [
 			{
 				statement:
 					'How might we give junior designers a "pre-flight checklist" for HMW questions that builds their intuition over time?',
-				move: 'narrowed',
+				moveType: 'narrowed',
 				rationale:
 					'Combines the preparation focus with skill-building — the checklist is a scaffold that eventually becomes internalized.'
 			},
 			{
 				statement:
 					'How might we make it easy for the whole product team to practice HMW framing outside of formal workshops?',
-				move: 'broadened',
+				moveType: 'broadened',
 				rationale:
 					'Builds on the team capability theme — if everyone practices, the facilitator burden drops naturally.'
 			},
 			{
 				statement:
 					'How might we help junior designers see the connection between their HMW questions and the quality of ideas they generate?',
-				move: 'combined',
+				moveType: 'combined',
 				rationale:
 					'Merges the feedback loop idea with the junior designer focus — makes learning concrete.'
 			}

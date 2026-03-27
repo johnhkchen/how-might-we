@@ -1,19 +1,89 @@
 // SSE client utility for streaming BAML responses
 
-import { apiFetch } from './client';
+import { apiFetch, apiUrl } from './client';
+
+export class TurnstileError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'TurnstileError';
+	}
+}
+
+export class RateLimitError extends Error {
+	readonly retryAfter: number;
+	readonly remaining: number;
+	readonly limit: number;
+	readonly isSessionLimit: boolean;
+
+	constructor(opts: {
+		retryAfter: number;
+		remaining: number;
+		limit: number;
+		isSessionLimit: boolean;
+		message: string;
+	}) {
+		super(opts.message);
+		this.name = 'RateLimitError';
+		this.retryAfter = opts.retryAfter;
+		this.remaining = opts.remaining;
+		this.limit = opts.limit;
+		this.isSessionLimit = opts.isSessionLimit;
+	}
+}
+
+export interface StreamOptions {
+	onHeaders?: (headers: Headers) => void;
+}
 
 export async function streamFromAPI<T>(
 	endpoint: string,
 	body: unknown,
-	onPartial: (data: Partial<T>) => void
+	onPartial: (data: Partial<T>) => void,
+	options?: StreamOptions
 ): Promise<void> {
-	const response = await apiFetch(endpoint, {
+	const response = await apiFetch(apiUrl(endpoint), {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(body)
 	});
 
 	if (!response.ok) {
+		if (response.status === 403) {
+			let msg = 'Bot protection check failed — try refreshing';
+			try {
+				const text = await response.text();
+				const json = JSON.parse(text);
+				if (json.error) msg = json.error;
+			} catch {
+				// use default message
+			}
+			throw new TurnstileError(msg);
+		}
+
+		if (response.status === 429) {
+			const retryAfter = parseInt(response.headers.get('Retry-After') || '0', 10);
+			const remaining = parseInt(response.headers.get('X-RateLimit-Remaining') || '0', 10);
+			const limit = parseInt(response.headers.get('X-RateLimit-Limit') || '0', 10);
+			const isSessionLimit = retryAfter === 0;
+
+			let errorMsg = 'Rate limit exceeded';
+			try {
+				const text = await response.text();
+				const json = JSON.parse(text);
+				if (json.error) errorMsg = json.error;
+			} catch {
+				// use default message
+			}
+
+			throw new RateLimitError({
+				retryAfter,
+				remaining,
+				limit,
+				isSessionLimit,
+				message: errorMsg
+			});
+		}
+
 		let message = `API error: ${response.status} ${response.statusText}`;
 		try {
 			const text = await response.text();
@@ -24,6 +94,8 @@ export async function streamFromAPI<T>(
 		}
 		throw new Error(message);
 	}
+
+	options?.onHeaders?.(response.headers);
 
 	const reader = response.body?.getReader();
 	if (!reader) throw new Error('No response body');

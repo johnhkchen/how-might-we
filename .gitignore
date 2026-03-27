@@ -18,6 +18,7 @@ backend/baml_client/
 
 # Go
 backend/bootstrap
+backend/*.so
 
 # Test artifacts
 frontend/playwright-report/

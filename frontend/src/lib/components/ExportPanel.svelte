@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { HMWCandidate, ProblemContext, MoveType } from '../stores/session.svelte';
+	import type { HMWCandidate, ProblemContext } from '../stores/session.svelte';
+	import { moveLabel } from '$lib/utils/moves';
 
 	let {
 		clippedCandidates,
@@ -13,13 +14,6 @@
 
 	let activeFormat = $state<ExportFormat>('text');
 	let copied = $state(false);
-
-	function moveLabel(move: MoveType): string {
-		return move
-			.split('_')
-			.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-			.join(' ');
-	}
 
 	function statement(c: HMWCandidate): string {
 		return c.userEdits ?? c.variant.statement;
@@ -46,7 +40,7 @@
 
 		clippedCandidates.forEach((c, i) => {
 			lines.push(`### ${i + 1}. ${statement(c)}`);
-			lines.push(`- **Move:** ${moveLabel(c.variant.move)}`);
+			lines.push(`- **Move:** ${moveLabel(c.variant.moveType)}`);
 			lines.push(`- **Rationale:** ${c.variant.rationale}`);
 			lines.push('');
 		});

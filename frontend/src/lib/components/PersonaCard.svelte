@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { fade, fly } from 'svelte/transition';
+	import { motionParams } from '$lib/utils/motion';
 	import type { Persona } from '../stores/session.svelte';
 
 	let {
@@ -72,6 +74,13 @@
 </script>
 
 <div class="bg-white rounded-lg border border-gray-200 p-6" data-testid="persona-card">
+	{#if isStreaming}
+		<div class="flex items-center gap-2 text-xs text-blue-500 mb-3">
+			<span class="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+			Streaming...
+		</div>
+	{/if}
+
 	<div class="flex items-baseline gap-3 mb-4">
 		{#if editingField === 'label'}
 			<input
@@ -84,6 +93,7 @@
 			/>
 		{:else if persona.label !== undefined}
 			<button
+				in:fade={motionParams(200)}
 				class="text-xl font-semibold text-gray-900 hover:bg-gray-50 rounded px-1 -mx-1 cursor-text text-left"
 				onclick={() => startEdit('label', persona.label || '')}
 				data-testid="persona-label"
@@ -91,7 +101,7 @@
 				{persona.label}
 			</button>
 		{:else if isStreaming}
-			<div class="h-7 w-40 bg-gray-200 rounded animate-pulse"></div>
+			<div class="h-7 w-40 rounded shimmer"></div>
 		{/if}
 
 		{#if editingField === 'role'}
@@ -105,6 +115,7 @@
 			/>
 		{:else if persona.role !== undefined}
 			<button
+				in:fade={motionParams(200)}
 				class="text-sm text-gray-500 hover:bg-gray-50 rounded px-1 -mx-1 cursor-text text-left"
 				onclick={() => startEdit('role', persona.role || '')}
 				data-testid="persona-role"
@@ -112,7 +123,7 @@
 				{persona.role}
 			</button>
 		{:else if isStreaming}
-			<div class="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
+			<div class="h-5 w-32 rounded shimmer"></div>
 		{/if}
 	</div>
 
@@ -122,7 +133,7 @@
 			{#if items !== undefined && items.length > 0}
 				<ul class="space-y-1">
 					{#each items as item, i}
-						<li class="flex items-center gap-1 group">
+						<li class="flex items-center gap-1 group" in:fly={{ y: 10, ...motionParams(250, i * 60) }}>
 							{#if editingField === `${field}-${i}`}
 								<input
 									type="text"
@@ -155,8 +166,8 @@
 				</ul>
 			{:else if isStreaming}
 				<div class="space-y-1">
-					<div class="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
-					<div class="h-4 w-36 bg-gray-200 rounded animate-pulse"></div>
+					<div class="h-4 w-48 rounded shimmer"></div>
+					<div class="h-4 w-36 rounded shimmer"></div>
 				</div>
 			{/if}
 			{#if items !== undefined && onUpdate}
@@ -188,6 +199,7 @@
 			></textarea>
 		{:else if persona.context !== undefined}
 			<button
+				in:fade={motionParams(200)}
 				class="text-sm text-gray-700 hover:bg-gray-50 rounded px-1 -mx-1 cursor-text text-left w-full"
 				onclick={() => startEdit('context', persona.context || '')}
 				data-testid="persona-context"
@@ -195,7 +207,7 @@
 				{persona.context}
 			</button>
 		{:else if isStreaming}
-			<div class="h-12 w-full bg-gray-200 rounded animate-pulse"></div>
+			<div class="h-12 w-full rounded shimmer"></div>
 		{/if}
 	</div>
 

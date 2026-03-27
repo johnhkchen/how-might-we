@@ -25,22 +25,24 @@ export default $config({
       handler: "bootstrap",
       runtime: "provided.al2023",
       architecture: "arm64",
+      streaming: true,
       url: {
-        streaming: true,
+        cors: {
+          allowOrigins: process.env.FRONTEND_URL
+            ? [process.env.FRONTEND_URL]
+            : ["*"],
+          allowMethods: ["POST", "OPTIONS"],
+          allowHeaders: ["Content-Type"],
+        },
       },
       environment: {
         HOME: "/tmp",
         ANTHROPIC_API_KEY: anthropicKey.value,
+        BAML_LIBRARY_PATH: "/var/task/libbaml_cffi-aarch64-unknown-linux-gnu.so",
       },
       link: [anthropicKey],
       timeout: "5 minutes",
       memory: "512 MB",
-      transform: {
-        url: (args) => {
-          // SST sets BUFFERED for custom runtimes; override for SSE streaming
-          args.invokeMode = "RESPONSE_STREAM";
-        },
-      },
     });
 
     // TODO (T-004): Frontend deployment to Cloudflare Pages
