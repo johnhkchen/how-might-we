@@ -26,3 +26,4 @@ frontend/test-results/
 
 # OS
 .DS_Store
+worker/.wrangler/
