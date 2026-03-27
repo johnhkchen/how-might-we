@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.svelte-kit/
+build/
+
+# SST
+.sst/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# BAML generated client
+backend/baml_client/
+
+# Go
+backend/bootstrap
+
+# OS
+.DS_Store

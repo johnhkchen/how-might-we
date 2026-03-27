@@ -1,0 +1,27 @@
+layout {
+    default_tab_template {
+        children
+        pane size=1 borderless=true {
+            plugin location="compact-bar"
+        }
+    }
+    tab name="lisa" {
+        pane stacked=true size="70%" {
+            pane expanded=true
+            pane
+            pane
+            pane
+        }
+        pane size="30%" {
+            plugin location="file:///var/folders/8w/d2995gqn5_1g_wcqy7_tnqgw0000gn/T/lisa-plugin-f5b1d5447470b936.wasm" {
+                ticket_dir "docs/active/tickets"
+                story_dir  "docs/active/stories"
+                work_dir   "docs/active/work"
+                max_threads "2"
+                auto_advance "false"
+                review_timeout_secs "240"
+                session_timeout_secs "1800"
+            }
+        }
+    }
+}

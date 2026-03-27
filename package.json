@@ -1,0 +1,15 @@
+{
+  "name": "hmw-workshop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:backend": "cd backend && go run main.go",
+    "dev:frontend": "cd frontend && npm run dev",
+    "deploy": "npx sst deploy"
+  },
+  "devDependencies": {
+    "sst": "^3.0.0",
+    "aws-cdk-lib": "2.171.1",
+    "constructs": "10.4.2"
+  }
+}
