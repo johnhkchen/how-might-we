@@ -1,5 +1,7 @@
 module github.com/hmw-workshop/backend
 
-go 1.23
+go 1.24.0
 
-require github.com/boundaryml/baml v0.216.0
+require github.com/boundaryml/baml v0.218.0
+
+require google.golang.org/protobuf v1.36.6 // indirect

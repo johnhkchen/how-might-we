@@ -38,7 +38,7 @@ class HMWAnalysis {
 
 class HMWVariant {
   statement string
-  move "narrowed" | "broadened" | "shifted_user" | "reframed_constraint" | "elevated_abstraction" | "inverted" | "combined" | "decomposed"
+  moveType "narrowed" | "broadened" | "shifted_user" | "reframed_constraint" | "elevated_abstraction" | "inverted" | "combined" | "decomposed"
   rationale string @description("why this reframing opens up better solution space")
 }
 

@@ -9,17 +9,17 @@ function RefineHMW(session: HMWSession) -> HMWRefinement {
 
     Selected/edited candidates (what resonated):
     {% for c in session.candidates %}{% if c.status == "SELECTED" or c.status == "EDITED" %}
-      - {{ c.userEdits ?? c.variant.statement }} (move: {{ c.variant.move }})
+      - {{ c.userEdits if c.userEdits else c.variant.statement }} (move: {{ c.variant.moveType }})
     {% endif %}{% endfor %}
 
     Skipped candidates (what didn't land):
     {% for c in session.candidates %}{% if c.status == "SKIPPED" %}
-      - {{ c.variant.statement }} (move: {{ c.variant.move }})
+      - {{ c.variant.statement }} (move: {{ c.variant.moveType }})
     {% endif %}{% endfor %}
 
     Already clipped (keeper list):
     {% for c in session.candidates %}{% if c.status == "CLIPPED" %}
-      - {{ c.userEdits ?? c.variant.statement }}
+      - {{ c.userEdits if c.userEdits else c.variant.statement }}
     {% endif %}{% endfor %}
 
     Iteration: {{ session.iterationCount }}
